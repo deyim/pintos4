@@ -218,7 +218,7 @@ thread_create (const char *name, int priority,
 
 
   
-list_init(&(temp->child_list));
+  list_init(&(temp->child_list));
   temp->wait = false;
   temp->Exit_status =0;
   temp->Parent = curThread;
@@ -227,7 +227,8 @@ list_init(&(temp->child_list));
 
   list_push_back(&(curThread->child_list),&(temp->child_elem));
   //----------------------------------------------
-
+  temp->executing_file = NULL;
+  //temp->file_name = NULL;
   /* Add to run queue. */
   thread_unblock (temp);
 

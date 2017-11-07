@@ -148,6 +148,11 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+
+  //if(cur->executing_file){
+  //  file_allow_write(cur->executing_file);
+  //  file_close(cur->executing_file);
+  //}
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -326,8 +331,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
 //printf("%s\n",file_name); 
 
   // Open executable file. //
+  //printf("%s\n",file_name);
 
   file = filesys_open (file_name);
+  t->executing_file = file;
+  strlcpy(t->file_name,file_name,40);
  if (file == NULL)
     {
       printf ("load: %s: open failed\n", file_name);
@@ -409,6 +417,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   // Set up stack. 
   if (!setup_stack (esp))
     goto done;
+
+
+//file_deny_write(file);
+//t->executing_file = file;
 
   // CONSTRUCT STACK 
  //printf("construct esp\n\n\n\n\n");

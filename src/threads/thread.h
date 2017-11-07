@@ -115,7 +115,8 @@ struct thread
   //file_dscriptor list, executable file 추가 
   struct list file_descriptor_list;
 
-
+  struct file *executing_file;
+  char file_name[40];
   };
 
 /* If false (default), use round-robin scheduler.

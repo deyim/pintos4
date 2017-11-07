@@ -271,14 +271,17 @@ int open(const char *file){
 		return -1;
 	}
 
+
 	now_file_desc->file = filesys_open(file);
+
+	if(strcmp(thread_current()->file_name,file)==0)
+		file_deny_write(now_file_desc);
+
 	if(now_file_desc->file == NULL){
 		palloc_free_page(now_file_desc);
 		return -1;
 	}
 	
-	file_deny_write(now_file_desc->file);
-
 	if(!list_empty(my_list)){
 		now_file_desc->id = list_entry(list_back(my_list),struct file_descriptor,file_list_elem)->id +1;
 		list_push_back(my_list,&(now_file_desc->file_list_elem));
