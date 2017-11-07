@@ -100,6 +100,22 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+////////////////////////////Project 1////////////////////////////////////////
+
+	struct list_elem child_elem;  
+	struct list child_list; 	
+	int Exit_status;	//나가는 싸인
+	int check_exit;	  //
+	struct thread *Parent ; 
+	bool wait;
+
+
+////////////////////////////Project 2////////////////////////////////////////
+  //file_dscriptor list, executable file 추가 
+  struct list file_descriptor_list;
+
+
   };
 
 /* If false (default), use round-robin scheduler.

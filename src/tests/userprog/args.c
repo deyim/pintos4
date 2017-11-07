@@ -13,6 +13,8 @@ main (int argc, char *argv[])
   test_name = "args";
 
   msg ("begin");
+//  printf("now pring argv\n");
+//  printf("%s %s %s", argv[0], argv[1], argv[2]);
   msg ("argc = %d", argc);
   for (i = 0; i <= argc; i++)
     if (argv[i] != NULL)

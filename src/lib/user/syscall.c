@@ -60,6 +60,21 @@
                : "memory");                                     \
           retval;                                               \
         })
+#define syscall4(NUMBER, ARG0, ARG1, ARG2,ARG3)                 \
+        ({                                                      \
+          int retval;                                           \
+          asm volatile                                          \
+            ("pushl %[arg3]; pushl %[arg2]; pushl %[arg1]; pushl %[arg0]; "    \
+             "pushl %[number]; int $0x30; addl $20, %%esp"      \
+               : "=a" (retval)                                  \
+               : [number] "i" (NUMBER),                         \
+                 [arg0] "g" (ARG0),                             \
+                 [arg1] "g" (ARG1),                             \
+                 [arg2] "g" (ARG2),						\
+			 	[arg3] "g" (ARG3)								\
+               : "memory");                                     \
+          retval; 												  \
+	})
 
 void
 halt (void) 
@@ -121,6 +136,17 @@ int
 write (int fd, const void *buffer, unsigned size)
 {
   return syscall3 (SYS_WRITE, fd, buffer, size);
+}
+
+int
+summationFour(int a, int b, int c, int d)
+{
+  return syscall4(SYS_SUM, a, b, c, d);
+}
+int
+fibo(int input)
+{
+  return syscall1(SYS_FIBO, input);
 }
 
 void
