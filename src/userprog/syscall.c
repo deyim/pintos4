@@ -31,12 +31,15 @@ void seek(int fd, unsigned position);
 unsigned tell(int fd);
 void close(int fd);
 
+struct lock rw_lock;
+
 struct file_descriptor*
 get_file_descriptor(struct thread *current, int fd);
 
 void
 syscall_init (void)
 {
+	lock_init(&rw_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -155,6 +158,7 @@ int read(int fd, void *buffer, unsigned size){
 	if(buffer > PHYS_BASE)
 		exit(-1);
 
+	lock_acquire(&rw_lock);
 	//if(fd != 0) exit(-1); //stdin
 	/////////////////////////////////////////
 	if(fd > 2){
@@ -165,9 +169,11 @@ int read(int fd, void *buffer, unsigned size){
 		now_file_desc = get_file_descriptor(current,fd);
 		if(now_file_desc != NULL){
 			int file_size = file_read(now_file_desc->file,buffer,size);
+			lock_release(&rw_lock);
 			return file_size;
 		}
 		else{
+			lock_release(&rw_lock);
 			return -1;
 		}
 	}
@@ -178,9 +184,11 @@ int read(int fd, void *buffer, unsigned size){
 			*(char*)(buffer+i) = tmp;
 			i++;
 		}
+		lock_release(&rw_lock);
 		return size;
 	}
 	else{
+		lock_release(&rw_lock);
 		return -1;
 	}
 
@@ -194,8 +202,10 @@ int write(int fd, const void *buffer, unsigned size){
 	if((buffer >= PHYS_BASE || !pagedir_get_page(curThread->pagedir,buffer) || buffer == NULL)){
 		exit(-1);
 	}
+	lock_acquire(&rw_lock);
 	 if(fd == 1){
 		putbuf((char*)buffer, size);
+		lock_release(&rw_lock);
 		return size;
 	}
 	else if(fd >2){
@@ -207,9 +217,11 @@ int write(int fd, const void *buffer, unsigned size){
 		now_file_desc = get_file_descriptor(current,fd);
 		if(now_file_desc != NULL){
 			int file_size = file_write(now_file_desc->file,buffer,size);
+			lock_release(&rw_lock);
 			return file_size;
 		}
 		else{
+			lock_release(&rw_lock);
 			return -1;
 		}
 
@@ -265,9 +277,10 @@ int open(const char *file){
 		exit(-1);
 	}
 
-
+	lock_acquire(&rw_lock);
 	now_file_desc = palloc_get_page(0);
 	if(now_file_desc == NULL){
+		lock_release(&rw_lock);
 		return -1;
 	}
 
@@ -275,10 +288,11 @@ int open(const char *file){
 	now_file_desc->file = filesys_open(file);
 
 	if(strcmp(thread_current()->file_name,file)==0)
-		file_deny_write(now_file_desc);
+		file_deny_write(now_file_desc->file);
 
 	if(now_file_desc->file == NULL){
 		palloc_free_page(now_file_desc);
+		lock_release(&rw_lock);
 		return -1;
 	}
 	
@@ -290,9 +304,10 @@ int open(const char *file){
 		now_file_desc->id = 3;
 		list_push_back(my_list,&(now_file_desc->file_list_elem));
 	}
-
+	lock_release(&rw_lock);
 	return now_file_desc->id;
 }
+
 void seek(int fd, unsigned position){
 	struct thread *current=thread_current();
 	struct file_descriptor* now_file_desc;
@@ -361,6 +376,8 @@ pid_t exec(const char * cmd_line){
 	char *parsed, *file_name, tmp[100];
 
 	int returnVal;
+
+	lock_acquire(&rw_lock);
 	strlcpy(tmp, cmd_line,strlen(cmd_line)+1);
 	file_name = strtok_r(tmp, " ", &parsed);
 	//printf("%s\n", file_name);	
@@ -369,9 +386,11 @@ pid_t exec(const char * cmd_line){
 	if(f!= NULL){
 		file_close(f);
 		returnVal = process_execute(cmd_line);
+		lock_release(&rw_lock);
 		return returnVal;
 	}
 	else{
+		lock_release(&rw_lock);
 		return -1;
 	}
 
