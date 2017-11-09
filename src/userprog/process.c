@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
 
 static int twice_cnt=0;
 static thread_func start_process NO_RETURN;
@@ -34,8 +35,10 @@ process_execute (const char *file_name)
 {
   char *fn_copy;
   tid_t tid;
+  struct list_elem *e;
+  struct thread *thread;
 
-
+//   printf("PROCESS EXECUTE %s\n", file_name);
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -44,8 +47,15 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
+  else{ 
+     thread = thread_found(tid);
+ //     printf("SEMA_DOWN tid: %d\n", thread->tid);
+	sema_down(&thread->wait_child);
+    }
+//  printf("PROCESS EXECUTE tid: %d\n", tid);
   return tid;
 }
 
@@ -57,6 +67,8 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+
+ // printf("START_PROCESS \n");
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -68,6 +80,14 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
   if (!success)
     thread_exit ();
+  else{
+   // printf("SEMA_UP HERE curthread: %d\n", thread_current()->tid);
+    sema_up(&thread_current()->wait_child);
+    intr_disable();
+    thread_block();
+    intr_enable();
+
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -99,6 +119,9 @@ process_wait (tid_t child_tid UNUSED)
 	char *tname = thread_name();
 	int returnVal;
 	
+
+//	printf("PROCES WAIT tid: %d\n", curThread->tid);
+
 	if(thread_check_exit(curThread)==1){
 		curThread->check_exit =0;
 		returnVal = curThread->Exit_status;
@@ -120,11 +143,21 @@ process_wait (tid_t child_tid UNUSED)
 
 			if(child->tid == child_tid){ //우리가 찾던 child를 찾았어!!! 그럼 걔한테 뭘해!
 				if(child->status != THREAD_DYING ){ //죽는 thread가 아니면은 -> child 실행하는거지
+          while(child->status == THREAD_BLOCKED){
+            thread_unblock(child);
+          }
+//		printf("SEMA_DOWN HERE tid: %d\n", child->tid);
+          sema_down(&child->wait_child);
 					child->wait =true; // 
+          /*
 					Level = intr_disable(); //
 					thread_block();
 					intr_set_level(Level);
-				}
+				  */
+          while(child->status == THREAD_BLOCKED){
+            thread_unblock(child);
+          }
+        }
 				else if(thread_check_exit(curThread)==1){ //child는 dying하고 있고, 나는 check_exit이 1이야.
 					curThread->check_exit = 0; //나의 check_exit을 0으로 바꿔ㅈㅊ
 				}
@@ -148,7 +181,7 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-
+  //printf("PROCESS EXIT tid: %d\n", cur->tid);
   //if(cur->executing_file){
   //  file_allow_write(cur->executing_file);
   //  file_close(cur->executing_file);
@@ -277,7 +310,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char *esp_stack[100]={0,};
   int argc_saved = 0;
 
-
+ // printf("LOAD %s\n", file_name);
  // int argc=0;
 //  char *argv[100]={0,},*save,*token,temp_fn[100]={0,};
 

@@ -70,6 +70,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+struct thread* thread_found(int thread_id);
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -225,6 +226,7 @@ thread_create (const char *name, int priority,
 
   list_init(&temp->file_descriptor_list);
 
+  sema_init(&temp->wait_child,0);
   list_push_back(&(curThread->child_list),&(temp->child_elem));
   //----------------------------------------------
   temp->executing_file = NULL;
@@ -617,3 +619,17 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+struct
+thread* thread_found(int thread_id){
+  struct list_elem *e;
+  struct thread *thread;
+
+  for(e = list_begin(&all_list); e!=list_end(&all_list);e = list_next(e)){
+      thread = list_entry(e, struct thread, allelem);
+      if(thread->tid == thread_id)
+        return thread;
+      else
+        continue;
+}
+}

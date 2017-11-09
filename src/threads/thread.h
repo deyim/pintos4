@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -110,7 +111,7 @@ struct thread
 	struct thread *Parent ; 
 	bool wait;
 
-
+  struct semaphore wait_child;
 ////////////////////////////Project 2////////////////////////////////////////
   //file_dscriptor list, executable file 추가 
   struct list file_descriptor_list;
