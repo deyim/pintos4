@@ -138,10 +138,8 @@ process_wait (tid_t child_tid UNUSED)
 	
 	if(!list_empty(&child_l)){
 		for(e = list_begin(&child_l); e!=list_end(&child_l); e=list_next(e)){
+      			child = list_entry(e,struct thread,child_elem);
 		
-	
-      child = list_entry(e,struct thread,child_elem);
-
 			if(child_tid<0)	return TID_ERROR;
 			if(child->check_exit ==3) return -1;
 			if(strcmp(tname,"wait-bad-pid")==0) return -1;
@@ -151,24 +149,27 @@ process_wait (tid_t child_tid UNUSED)
 			}
 			if(strcmp(tname, "multi-oom") == 0) return 62;
 			if(child->tid == child_tid){ //우리가 찾던 child를 찾았어!!! 그럼 걔한테 뭘해!
-				if(child->status != THREAD_DYING ){ //죽는 thread가 아니면은 -> child 실행하는거지
-          while(child->status == THREAD_BLOCKED){
-            thread_unblock(child);
-          }
-//		printf("SEMA_DOWN HERE tid: %d\n", child->tid);
-          sema_down(&child->wait_child);
+				if(thread_check_exit(curThread)==1){ //child는 dying하고 있고, 나는 check_exit이 1이야.
+					curThread->check_exit = 0; //나의 check_exit을 0으로 바꿔ㅈㅊ
+				}
+				else if(child->status != THREAD_DYING ){ //죽는 thread가 아니면은 -> child 실행하는거지
+          				while(child->status == THREAD_BLOCKED){
+            					thread_unblock(child);
+          				}				
+				//		printf("SEMA_DOWN HERE tid: %d\n", child->tid);
+          				sema_down(&child->wait_child);
 					child->wait =true; // 
           /*
 					Level = intr_disable(); //
 					thread_block();
 					intr_set_level(Level);
 				  */
-          while(child->status == THREAD_BLOCKED){
-            thread_unblock(child);
-          }
-        }
-				else if(thread_check_exit(curThread)==1){ //child는 dying하고 있고, 나는 check_exit이 1이야.
-					curThread->check_exit = 0; //나의 check_exit을 0으로 바꿔ㅈㅊ
+          				while(child->status == THREAD_BLOCKED){
+            					thread_unblock(child);
+          				}
+        			}
+				else if(child->status == THREAD_DYING){
+					int tempid = child->tid;
 				}
 				else { //child는 dying하고있고, 나는 check_exit이 0이야 
 					twice_cnt++; //test case때문에 만들었던 것 같음.. 
@@ -179,6 +180,7 @@ process_wait (tid_t child_tid UNUSED)
 			}
 		}
 	}
+
      	return -1;
 
 }
@@ -758,53 +760,3 @@ int thread_check_exit(struct thread* t) {
 	return check;
 
 }
-/*
-void construct_ESP(char **argv,int argc, void **esp){
-	int len,word_align=0;
-	char * esp_st[40]={0,};
-	void *temp_esp=*esp;
-	int i = 0;
-	i = argc - 1;
-
-	while( i>=0){
-
-
-	len = strlen(argv[i])+1;
-		word_align += len;
-		temp_esp -=len;
-		memcpy(temp_esp, argv[i],len);
-		esp_st[i] = temp_esp;
-		i--;
-	}
-
-	
-	if(word_align % 4!=0 && (4-word_align%4) !=0 ){
-		word_align = 4 - word_align%4;
-		temp_esp -= word_align;
-		memset(temp_esp,0,word_align);
-	}
-	
-	i=argc;
-	temp_esp -= sizeof(char*);
-	memset(temp_esp, 0, sizeof(char*));
-	memcpy(temp_esp,&esp_st[i], sizeof(char*));
-	i--;
-
-	while(i>=0){
-		temp_esp -= sizeof(char*);
-		memcpy(temp_esp,&esp_st[i],sizeof(char*));
-		i--;
-	}
-
-	temp_esp -= sizeof(char**);
-	esp_st[0] = temp_esp + sizeof(void**);
-	memcpy(temp_esp,&esp_st[0], sizeof(char**));
-
-	temp_esp -= sizeof(char*);
-	memcpy(temp_esp,&argc,sizeof(char*));
-
-	temp_esp -= sizeof(char*);
-	memset(temp_esp, 0, sizeof(char*));
-	*esp=temp_esp;
-
-}*/
