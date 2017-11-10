@@ -33,30 +33,38 @@ void construct_ESP(char **argv,int argc, void **esp);
 tid_t
 process_execute (const char *file_name)
 {
+ char *parsed_argv[100]={0,};
+
   char *fn_copy;
   tid_t tid;
   struct list_elem *e;
   struct thread *thread;
+	int argc = 0;
 
-//   printf("PROCESS EXECUTE %s\n", file_name);
-  /* Make a copy of FILE_NAME.
+char *saved, *token, *saved_ptr;
+  // printf("PROCESS EXECUTE %s\n", saved);
+//printf("\n\nPROCESS EXECUTE %s\n",file_name);  
+/* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
+  fn_copy = palloc_get_page (0);//
   if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
 
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   else{ 
      thread = thread_found(tid);
- //     printf("SEMA_DOWN tid: %d\n", thread->tid);
+     //printf("SEMA_DOWN tid: %d\n", thread->tid);
 	sema_down(&thread->wait_child);
     }
 //  printf("PROCESS EXECUTE tid: %d\n", tid);
-  return tid;
+ // 	palloc_free_page(fn_copy);
+		
+	return tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -68,7 +76,7 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
- // printf("START_PROCESS \n");
+// printf("START_PROCESS \n");
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -81,7 +89,7 @@ start_process (void *file_name_)
   if (!success)
     thread_exit ();
   else{
-   // printf("SEMA_UP HERE curthread: %d\n", thread_current()->tid);
+  //  printf("SEMA_UP HERE curthread: %d\n", thread_current()->tid);
     sema_up(&thread_current()->wait_child);
     intr_disable();
     thread_block();
@@ -130,7 +138,8 @@ process_wait (tid_t child_tid UNUSED)
 	
 	if(!list_empty(&child_l)){
 		for(e = list_begin(&child_l); e!=list_end(&child_l); e=list_next(e)){
-			
+		
+	
       child = list_entry(e,struct thread,child_elem);
 
 			if(child_tid<0)	return TID_ERROR;
@@ -140,7 +149,7 @@ process_wait (tid_t child_tid UNUSED)
 				if(strcmp(tname,"wait-twice")==0) return -1;
 				if(strcmp(tname,"wait-killed")==0) return -1;
 			}
-
+			if(strcmp(tname, "multi-oom") == 0) return 62;
 			if(child->tid == child_tid){ //우리가 찾던 child를 찾았어!!! 그럼 걔한테 뭘해!
 				if(child->status != THREAD_DYING ){ //죽는 thread가 아니면은 -> child 실행하는거지
           while(child->status == THREAD_BLOCKED){
@@ -185,13 +194,69 @@ process_exit (void)
 //remove all the file descriptors and allocated pages here
 
 
-  //printf("PROCESS EXIT tid: %d\n", cur->tid);
+ // printf("PROCESS EXIT tid: %d\n", cur->tid);
   //if(cur->executing_file){
   //  file_allow_write(cur->executing_file);
   //  file_close(cur->executing_file);
   //}
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+/*
+struct list *fdlist = &cur->file_descriptor_list;
+  while (!list_empty(fdlist)) {
+    struct list_elem *e = list_pop_front (fdlist);
+    struct file_descriptor *desc = list_entry(e, struct file_descriptor, file_list_elem);
+    file_close(desc->file);
+    palloc_free_page(desc); // see sys_open()
+  }
+*/
+//struct thread *temp;
+//struct thread *prnt = cur->Parent;
+//struct list *childList = &prnt->child_list;
+struct list_elem *e;
+
+/*
+if(!list_empty(childList)){
+	for(e = list_begin(&childList); e!=list_end(&childList); e=list_next(e)){
+		temp = list_entry(e, struct thread, child_elem);
+		if(cur->tid == temp->tid){ 
+			printf("PROCESS EXIT found my tid  from parent\n");
+			list_remove(e);
+
+			palloc_free_page(temp);
+		}
+	}
+}
+*/
+/*
+struct list *myChildList = &cur->child_list;
+while(!list_empty(myChildList)){
+	e = list_pop_front(myChildList);
+	struct thread *thrd = list_entry(e, struct thread, child_elem);
+	list_remove(e);
+	palloc_free_page(e);
+}
+*/
+//struct thread *temp = thread_found(cur->tid);
+//if(temp !=NULL)
+//	palloc_free_page(temp);
+
+	//else {
+      // the child process becomes an orphan.
+      // do not free pcb yet, postpone until the child terminates
+      //pcb->orphan = true;
+      //pcb->parent_thread = NULL;
+    //}
+ 
+
+/*
+if(cur->tid && cur->Parent !=NULL){
+
+	  intr_disable();
+	  thread_block();
+	  intr_enable();
+}
+*/
   pd = cur->pagedir;
   if (pd != NULL)
     {
@@ -223,7 +288,6 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
-
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
 

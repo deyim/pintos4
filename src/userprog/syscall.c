@@ -51,6 +51,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	char *buffer;
 int *args = f->esp;
 int returnVal;
+//printf("  HERE IN SYSCALL: tid number = %d\n", &thread_current()->tid);
 switch(*(int*)(f->esp)){
 
 	//printf("f->esp : %d\n", *(int*)(f->esp));
@@ -273,10 +274,34 @@ int open(const char *file){
 	struct list *my_list = &thread_current()->file_descriptor_list;
 	struct file_descriptor* now_file_desc;
 
+	//	printf("111open PHYS_BASE tid number :%d\n", &thread_current()->tid);
 	if(file == NULL){
 		exit(-1);
 	}
 
+//	printf("file : %s // PHYS_BASE: %x\n", file, (char*)PHYS_BASE);
+/*
+	if(file == PHYS_BASE){
+	//	printf("case 4\n");
+		//exit(-1);
+		printf("open PHYS_BASE tid number :%d\n", &thread_current()->tid);
+		return -1;
+	}
+*/
+
+//	if((char*)PHYS_BASE == "0xc00000000"){
+//		printf("0xc000000\n");
+//		exit(-1);
+//	}
+
+/*
+
+	if(file <= (char*)PHYS_BASE){ //!= ???
+		printf("came here?????????\n\n");
+		return -1;
+//		exit(-1);
+	}
+*/
 	lock_acquire(&rw_lock);
 	now_file_desc = palloc_get_page(0);
 	if(now_file_desc == NULL){

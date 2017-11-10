@@ -109,7 +109,9 @@ thread_start (void)
 {
   /* Create the idle thread. */
   struct semaphore start_idle;
+//	printf("THREAD START\n");
   sema_init (&start_idle, 0);
+
   thread_create ("idle", PRI_MIN, idle, &start_idle);
 
 
@@ -179,8 +181,10 @@ thread_create (const char *name, int priority,
 
   ASSERT (function != NULL);
 
+//	printf("THREAD CREATE %d\n", curThread->tid);
 
   /* Allocate thread. */
+//	printf("palloc to temp\n");
   temp = palloc_get_page (PAL_ZERO);
   if (temp == NULL)
     return TID_ERROR;
@@ -188,7 +192,7 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (temp, name, priority);
   tid = temp->tid = allocate_tid ();
-
+//	printf("temp tid: %d\n", tid);
   if(tid > 32768)
   {
 	  temp->check_exit =3 ;
@@ -225,7 +229,7 @@ thread_create (const char *name, int priority,
   temp->Parent = curThread;
 
   list_init(&temp->file_descriptor_list);
-
+//	printf("SEMA INIT temp->wiat_child\n");
   sema_init(&temp->wait_child,0);
   list_push_back(&(curThread->child_list),&(temp->child_elem));
   //----------------------------------------------
@@ -251,7 +255,7 @@ thread_block (void)
 {
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
-
+//	printf("THREAD BLOCK %d\n", thread_current()->tid);
   thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
@@ -273,6 +277,10 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
+
+
+//	printf("THREAD UNBLOCK %d\n", thread_current()->tid);
+
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
   intr_set_level (old_level);

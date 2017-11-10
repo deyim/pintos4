@@ -72,18 +72,23 @@ consume_some_resources_and_die (int seed)
   switch (random_ulong () % 5)
     {
       case 0:
+	printf("CASE 0\n\n");
         *(int *) NULL = 42;
 
       case 1:
+	printf("CASE 1\n\n");
         return *(int *) NULL;
 
       case 2:
+	printf("CASE 2\n\n");
         return *PHYS_BASE;
 
       case 3:
+	printf("CASE 3\n\n");
         *PHYS_BASE = 42;
 
       case 4:
+	printf("CASE 4\n\n");
         open ((char *)PHYS_BASE);
         exit (-1);
 
@@ -121,6 +126,8 @@ main (int argc, char *argv[])
 
   int howmany = is_at_root ? EXPECTED_REPETITIONS : 1;
   int i, expected_depth = -1;
+//	printf("**************************************\n");
+//	printf("CONSUME OVER\n");
 
   for (i = 0; i < howmany; i++)
     {
