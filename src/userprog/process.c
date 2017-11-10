@@ -181,6 +181,10 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+////////////////multi oom solution/////////////////////
+//remove all the file descriptors and allocated pages here
+
+
   //printf("PROCESS EXIT tid: %d\n", cur->tid);
   //if(cur->executing_file){
   //  file_allow_write(cur->executing_file);
