@@ -4,7 +4,11 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-
+#include "threads/palloc.h"
+#include "userprog/syscall.h"
+#include "threads/vaddr.h"
+//#include "vm/page.h"
+#include "userprog/pagedir.h"
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -126,6 +130,13 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
+  struct thread *t;
+  
+  uint8_t user_pages = PHYS_BASE -2 *PGSIZE;
+  uint32_t pagedir;
+  t = thread_current();
+
+  pagedir = t->pagedir;
 
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
@@ -159,6 +170,43 @@ page_fault (struct intr_frame *f)
           user ? "user" : "kernel");
   kill (f);
 */
-exit(-1);
+
+/*
+	  if(user==1 ){
+	  if(not_present==1){
+		  if(write==1){
+			  if(fault_addr>0 && fault_addr < PHYS_BASE){
+				  int i;
+				  void *stack_grow = PHYS_BASE - 1024*8;
+
+				  for(i=0; i<32; i++){
+					  pagedir_get_page(t->pagedir, stack_grow-(i*PGSIZE));
+					  if(!pagedir_set_page(t->pagedir, stack_grow-(i*PGSIZE), palloc_get_page(PAL_USER),write))
+						  break;
+				  }
+
+			  }
+			  else
+				  exit(-1);
+		  }
+		  else
+			  exit(-1);
+	  }else
+		exit(-1);
+  }else
+	exit(-1);
+*/
+void *stack_grow = PHYS_BASE - 1024*8;
+if(user != 1 || not_present != 1 || write != 1) exit(-1);
+else{
+  if(fault_addr>0 && fault_addr < PHYS_BASE){
+     int i;
+     for(i=0; i<32; i++){
+        pagedir_get_page(t->pagedir, stack_grow-(i*PGSIZE));
+        if(!pagedir_set_page(t->pagedir, stack_grow-(i*PGSIZE), palloc_get_page(PAL_USER),write))
+           break;
+      }
+     }
+   }
 }
 

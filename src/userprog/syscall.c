@@ -155,11 +155,12 @@ int filesize( int fd){
 int read(int fd, void *buffer, unsigned size){
 	int i=0;
 	uint8_t tmp;
-	if(fd < 0) exit(-1);
-	if(buffer > PHYS_BASE)
-		exit(-1);
-
 	lock_acquire(&rw_lock);
+	if(fd < 0) exit(-1);
+	if(buffer > PHYS_BASE){
+		lock_release(&rw_lock);	
+		exit(-1);
+	}
 	//if(fd != 0) exit(-1); //stdin
 	/////////////////////////////////////////
 	if(fd > 2){
